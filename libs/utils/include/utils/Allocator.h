@@ -125,6 +125,8 @@ public:
 
     void free(void*, size_t) UTILS_RESTRICT noexcept { }
 
+    void free(void*) UTILS_RESTRICT noexcept { }
+
 private:
     void* end() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mSize); }
     void* current() UTILS_RESTRICT noexcept { return pointermath::add(mBegin, mCur); }
@@ -163,14 +165,6 @@ public:
     void free(void* p, size_t) noexcept {
         free(p);
     }
-
-    // Allocators can't be copied
-    HeapAllocator(const HeapAllocator& rhs) = delete;
-    HeapAllocator& operator=(const HeapAllocator& rhs) = delete;
-
-    // Allocators can be moved
-    HeapAllocator(HeapAllocator&& rhs) noexcept = default;
-    HeapAllocator& operator=(HeapAllocator&& rhs) noexcept = default;
 
     ~HeapAllocator() noexcept = default;
 
