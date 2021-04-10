@@ -182,7 +182,12 @@ add_custom_command(
     DEPENDS filament-js
     COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.wasm ${SERVER_DIR})
 
-add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm)
+add_custom_command(
+    OUTPUT ${SERVER_DIR}/filament-viewer.js
+    DEPENDS ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js
+    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament-viewer.js ${SERVER_DIR})
+
+add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm ${SERVER_DIR}/filament-viewer.js)
 
 # ==================================================================================================
 # The websamples target depends on all HTML files, assets, and filament.{js,wasm}
@@ -193,8 +198,10 @@ set(HTML_FILES
     helmet.html
     morphing.html
     parquet.html
+    remote.html
     skinning.html
     suzanne.html
+    test-filament-viewer.html
     triangle.html)
 
 set(ASSET_FILES

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/ColorGrading.h>
 #include <filament/Color.h>
@@ -23,6 +24,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/RenderTarget.h>
 #include <filament/Texture.h>
+#include <filament/TextureSampler.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
@@ -68,6 +70,9 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("MORPH_TANGENTS_1", MORPH_TANGENTS_1)
     .value("MORPH_TANGENTS_2", MORPH_TANGENTS_2)
     .value("MORPH_TANGENTS_3", MORPH_TANGENTS_3);
+
+enum_<BufferObject::BindingType>("BufferObject$BindingType")
+    .value("VERTEX_BINDING", BufferObject::BindingType::VERTEX);
 
 enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
     .value("BYTE", VertexBuffer::AttributeType::BYTE)
@@ -135,6 +140,10 @@ enum_<View::BloomOptions::BlendMode>("View$BloomOptions$BlendMode")
 enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
+
+enum_<View::DepthOfFieldOptions::Filter>("View$DepthOfFieldOptions$Filter")
+    .value("NONE", View::DepthOfFieldOptions::Filter::NONE)
+    .value("MEDIAN", View::DepthOfFieldOptions::Filter::MEDIAN);
 
 enum_<Camera::Fov>("Camera$Fov")
     .value("VERTICAL", Camera::Fov::VERTICAL)
@@ -373,6 +382,20 @@ enum_<backend::SamplerMinFilter>("MinFilter")
     .value("LINEAR_MIPMAP_NEAREST", backend::SamplerMinFilter::LINEAR_MIPMAP_NEAREST)
     .value("NEAREST_MIPMAP_LINEAR", backend::SamplerMinFilter::NEAREST_MIPMAP_LINEAR)
     .value("LINEAR_MIPMAP_LINEAR", backend::SamplerMinFilter::LINEAR_MIPMAP_LINEAR);
+
+enum_<TextureSampler::CompareMode>("CompareMode")
+    .value("NONE", TextureSampler::CompareMode::NONE)
+    .value("COMPARE_TO_TEXTURE", TextureSampler::CompareMode::COMPARE_TO_TEXTURE);
+
+enum_<TextureSampler::CompareFunc>("CompareFunc")
+    .value("LESS_EQUAL", TextureSampler::CompareFunc::LE)
+    .value("GREATER_EQUAL", TextureSampler::CompareFunc::GE)
+    .value("LESS", TextureSampler::CompareFunc::L)
+    .value("GREATER", TextureSampler::CompareFunc::G)
+    .value("EQUAL", TextureSampler::CompareFunc::E)
+    .value("NOT_EQUAL", TextureSampler::CompareFunc::NE)
+    .value("ALWAYS", TextureSampler::CompareFunc::A)
+    .value("NEVER", TextureSampler::CompareFunc::N);
 
 enum_<backend::SamplerMagFilter>("MagFilter")
     .value("NEAREST", backend::SamplerMagFilter::NEAREST)

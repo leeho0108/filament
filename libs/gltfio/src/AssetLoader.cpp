@@ -22,9 +22,9 @@
 #include "GltfEnums.h"
 
 #include <filament/Box.h>
+#include <filament/BufferObject.h>
 #include <filament/Camera.h>
 #include <filament/Engine.h>
-#include <filament/Exposure.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
@@ -515,6 +515,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity, const
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
         const UvMap& uvmap, const char* name) {
+    outPrim->uvmap = uvmap;
+
     // Create a little lambda that appends to the asset's vertex buffer slots.
     auto slots = &mResult->mBufferSlots;
     auto addBufferSlot = [slots](BufferSlot entry) {
@@ -559,6 +561,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     mResult->mIndexBuffers.push_back(indices);
 
     VertexBuffer::Builder vbb;
+    vbb.enableBufferObjects();
 
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
@@ -663,8 +666,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
 
     cgltf_size targetsCount = inPrim->targets_count;
+
+    // There is no need to emit a warning if there are more than 4 targets. This is only the base
+    // VertexBuffer and more might be created by MorphHelper.
     if (targetsCount > MAX_MORPH_TARGETS) {
-        slog.w << "Too many morph targets in " << name << io::endl;
         targetsCount = MAX_MORPH_TARGETS;
     }
 
@@ -774,10 +779,13 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
     if (needsDummyData) {
         uint32_t size = sizeof(ubyte4) * vertexCount;
+        BufferObject* bufferObject = BufferObject::Builder().size(size).build(*mEngine);
+        mResult->mBufferObjects.push_back(bufferObject);
         uint32_t* dummyData = (uint32_t*) malloc(size);
         memset(dummyData, 0xff, size);
         VertexBuffer::BufferDescriptor bd(dummyData, size, FREE_CALLBACK);
-        vertices->setBufferAt(*mEngine, slot, std::move(bd));
+        bufferObject->setBuffer(*mEngine, std::move(bd));
+        vertices->setBufferObjectAt(*mEngine, slot, bufferObject);
     }
 
     return true;
@@ -838,7 +846,7 @@ void FAssetLoader::createCamera(const cgltf_camera* camera, Entity entity) {
         const double aspect = projection.aspect_ratio > 0.0 ? projection.aspect_ratio : 1.0;
 
         // Use the scaling matrix to set the aspect ratio, so clients can easily change it.
-        filamentCamera->setScaling(double4 {1.0 / aspect, 1.0, 1.0, 1.0});
+        filamentCamera->setScaling({1.0 / aspect, 1.0 });
     } else if (camera->type == cgltf_camera_type_orthographic) {
         auto& projection = camera->data.orthographic;
 
@@ -985,10 +993,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     }
 
     const float* e = inputMat->emissive_factor;
-    // To force emissive to bloom when emissiveFactor is at 1, we multiply by a luminance
-    // of 6EV. At 6EV, the luminance will be 2^(6-3) = 8 which is about the HDR range of
-    // our default tone mappers.
-    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]) * Exposure::luminance(6.0f));
+    mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
 
     const float* c = mrConfig.base_color_factor;
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));

@@ -29,6 +29,7 @@
 #include "private/backend/SamplerGroup.h"
 
 #include <array>
+#include <memory>
 #include <mutex>
 #include <utility>
 
@@ -54,7 +55,8 @@ struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount{};               //   4
     uint8_t bufferCount{};                //   1
     uint8_t attributeCount{};             //   1
-    uint8_t padding[2]{};                 //   2 -> total struct is 136 bytes
+    bool padding{};                       //   1
+    uint8_t bufferObjectsVersion{};       //   1 -> total struct is 136 bytes
 
     HwVertexBuffer() noexcept = default;
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
@@ -64,6 +66,13 @@ struct HwVertexBuffer : public HwBase {
               bufferCount(bufferCount),
               attributeCount(attributeCount) {
     }
+};
+
+struct HwBufferObject : public HwBase {
+    uint32_t byteCount{};
+
+    HwBufferObject() noexcept = default;
+    HwBufferObject(uint32_t byteCount) noexcept : byteCount(byteCount) {}
 };
 
 struct HwIndexBuffer : public HwBase {
@@ -186,6 +195,9 @@ protected:
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
     void scheduleRelease(AcquiredImage&& image) noexcept;
+
+    void debugCommandBegin(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
+    void debugCommandEnd(CommandStream* cmds, bool synchronous, const char* methodName) noexcept override;
 
 private:
     std::mutex mPurgeLock;

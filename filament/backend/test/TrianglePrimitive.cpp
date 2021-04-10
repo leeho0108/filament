@@ -47,10 +47,13 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
     AttributeBitset enabledAttributes;
     enabledAttributes.set(VertexAttribute::POSITION);
 
+    const size_t size = sizeof(math::float2) * 3;
+    mBufferObject = mDriverApi.createBufferObject(size, BufferObjectBinding::VERTEX);
     mVertexBuffer = mDriverApi.createVertexBuffer(1, 1, mVertexCount, attributes,
             BufferUsage::STATIC);
-    BufferDescriptor vertexBufferDesc(gVertices, sizeof(filament::math::float2) * 3, nullptr);
-    mDriverApi.updateVertexBuffer(mVertexBuffer, 0, std::move(vertexBufferDesc), 0);
+    mDriverApi.setVertexBufferObject(mVertexBuffer, 0, mBufferObject);
+    BufferDescriptor vertexBufferDesc(gVertices, size, nullptr);
+    mDriverApi.updateBufferObject(mBufferObject, std::move(vertexBufferDesc), 0);
 
     mIndexBuffer = mDriverApi.createIndexBuffer(ElementType::SHORT, mIndexCount,
             BufferUsage::STATIC);
@@ -59,8 +62,7 @@ TrianglePrimitive::TrianglePrimitive(filament::backend::DriverApi& driverApi,
 
     mRenderPrimitive = mDriverApi.createRenderPrimitive(0);
 
-    mDriverApi.setRenderPrimitiveBuffer(mRenderPrimitive, mVertexBuffer, mIndexBuffer,
-            enabledAttributes.getValue());
+    mDriverApi.setRenderPrimitiveBuffer(mRenderPrimitive, mVertexBuffer, mIndexBuffer);
     mDriverApi.setRenderPrimitiveRange(mRenderPrimitive, PrimitiveType::TRIANGLES, 0, 0, 2, 3);
 }
 
@@ -73,7 +75,7 @@ void TrianglePrimitive::updateVertices(const filament::math::float2 vertices[3])
             [] (void* buffer, size_t size, void* user) {
         free(buffer);
     });
-    mDriverApi.updateVertexBuffer(mVertexBuffer, 0, std::move(vBuffer), 0);
+    mDriverApi.updateBufferObject(mBufferObject, std::move(vBuffer), 0);
 }
 
 void TrianglePrimitive::updateIndices(const short indices[3]) noexcept {
@@ -89,6 +91,7 @@ void TrianglePrimitive::updateIndices(const short indices[3]) noexcept {
 }
 
 TrianglePrimitive::~TrianglePrimitive() {
+    mDriverApi.destroyBufferObject(mBufferObject);
     mDriverApi.destroyVertexBuffer(mVertexBuffer);
     mDriverApi.destroyIndexBuffer(mIndexBuffer);
     mDriverApi.destroyRenderPrimitive(mRenderPrimitive);

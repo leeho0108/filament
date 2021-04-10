@@ -48,6 +48,11 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_APPLE_CVPIXELBUFFER = 0x8;
 
 static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 16; // This is guaranteed by OpenGL ES.
 static constexpr size_t MAX_SAMPLER_COUNT = 16;          // Matches the Adreno Vulkan driver.
+static constexpr size_t MAX_VERTEX_BUFFER_COUNT = 16;    // Max number of bound buffer objects.
+
+static_assert(MAX_VERTEX_BUFFER_COUNT <= MAX_VERTEX_ATTRIBUTE_COUNT,
+        "The number of buffer objects that can be attached to a VertexBuffer must be "
+        "less than or equal to the maximum number of vertex attributes.");
 
 static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 6;
 static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 6;
@@ -261,6 +266,11 @@ enum class ElementType : uint8_t {
     HALF2,
     HALF3,
     HALF4,
+};
+
+//! Buffer object binding type
+enum class BufferObjectBinding : uint8_t {
+    VERTEX,
 };
 
 //! Face culling Mode
@@ -502,6 +512,7 @@ enum class TextureFormat : uint16_t {
 
 //! Bitmask describing the intended Texture Usage
 enum class TextureUsage : uint8_t {
+    NONE                = 0x0,
     COLOR_ATTACHMENT    = 0x1,                      //!< Texture can be used as a color attachment
     DEPTH_ATTACHMENT    = 0x2,                      //!< Texture can be used as a depth attachment
     STENCIL_ATTACHMENT  = 0x4,                      //!< Texture can be used as a stencil attachment
@@ -512,7 +523,7 @@ enum class TextureUsage : uint8_t {
 };
 
 //! Texture swizzle
-enum class TextureSwizzle {
+enum class TextureSwizzle : uint8_t {
     SUBSTITUTE_ZERO,
     SUBSTITUTE_ONE,
     CHANNEL_0,
@@ -723,9 +734,10 @@ struct Attribute {
     static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
     //! attribute is an integer
     static constexpr uint8_t FLAG_INTEGER_TARGET = 0x2;
+    static constexpr uint8_t BUFFER_UNUSED = 0xFF;
     uint32_t offset = 0;                    //!< attribute offset in bytes
     uint8_t stride = 0;                     //!< attribute stride in bytes
-    uint8_t buffer = 0xFF;                  //!< attribute buffer index
+    uint8_t buffer = BUFFER_UNUSED;         //!< attribute buffer index
     ElementType type = ElementType::BYTE;   //!< attribute element type
     uint8_t flags = 0x0;                    //!< attribute flags
 };

@@ -27,7 +27,8 @@
 #include <math/vec4.h>
 
 #include <tsl/robin_map.h>
-#include <tsl/robin_set.h>
+
+#include <set>
 
 #ifndef FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB
 #    define FILAMENT_OPENGL_HANDLE_ARENA_SIZE_IN_MB 2
@@ -66,6 +67,14 @@ public:
         uint32_t base = 0;
         uint32_t size = 0;
         backend::BufferUsage usage = {};
+    };
+
+    struct GLBufferObject : public backend::HwBufferObject {
+        using HwBufferObject::HwBufferObject;
+        GLBufferObject(uint32_t size) noexcept : HwBufferObject(size) {}
+        struct {
+            GLuint id = 0;
+        } gl;
     };
 
     struct GLVertexBuffer : public backend::HwVertexBuffer {
@@ -234,7 +243,6 @@ private:
 
 #include "private/backend/DriverAPI.inc"
 
-
     // Memory management...
 
     class HandleAllocator {
@@ -253,35 +261,9 @@ private:
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock,
             utils::TrackingPolicy::Debug>;
-
-    utils::SpinLock mHandleSetLock;
-    tsl::robin_set<backend::HandleBase::HandleId> mHandleSet;
-    void registerHandleId(backend::HandleBase::HandleId id) noexcept {
-        mHandleSetLock.lock();
-        auto result = mHandleSet.insert(id);
-        assert_invariant(result.second);
-        mHandleSetLock.unlock();
-    }
-    void unregisterHandleId(backend::HandleBase::HandleId id) noexcept {
-        mHandleSetLock.lock();
-        assert_invariant(mHandleSet.find(id) != mHandleSet.cend() );
-        mHandleSet.erase(id);
-        mHandleSetLock.unlock();
-    }
-    void assertHandleId(backend::HandleBase::HandleId id) noexcept {
-        mHandleSetLock.lock();
-        assert_invariant(mHandleSet.find(id) != mHandleSet.cend() );
-        mHandleSetLock.unlock();
-    }
-
 #else
     using HandleArena = utils::Arena<HandleAllocator,
             utils::LockingPolicy::SpinLock>;
-
-    inline void registerHandleId(backend::HandleBase::HandleId id) noexcept {}
-    inline void unregisterHandleId(backend::HandleBase::HandleId id) noexcept {}
-    inline void assertHandleId(backend::HandleBase::HandleId id) noexcept {}
-
 #endif
 
     HandleArena mHandleArena;
@@ -314,7 +296,6 @@ private:
     handle_cast(backend::Handle<B>& handle) noexcept {
         assert_invariant(handle);
         if (!handle) return nullptr; // better to get a NPE than random behavior/corruption
-        assertHandleId(handle.getId());
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
         // assert that this handle is even a valid one
@@ -340,6 +321,8 @@ private:
     GetProcAddressType getProcAddress = nullptr;
 
     /* Misc... */
+
+    void updateVertexArrayObject(GLRenderPrimitive* rp, GLVertexBuffer const* vb);
 
     void framebufferTexture(backend::TargetBufferInfo const& binfo,
             GLRenderTarget const* rt, GLenum attachment) noexcept;
@@ -374,6 +357,7 @@ private:
     /* State tracking GL wrappers... */
 
            void bindTexture(GLuint unit, GLTexture const* t) noexcept;
+           void bindSampler(GLuint unit, backend::SamplerParams params) noexcept;
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     enum class ResolveAction { LOAD, STORE };

@@ -22,6 +22,8 @@
 #include <utils/CString.h>
 #include <utils/debug.h>
 
+#include <backend/Handle.h>
+
 #include "GLUtils.h"
 
 #include <set>
@@ -35,11 +37,23 @@ public:
     typedef math::details::TVec4<GLint> vec4gli;
     typedef math::details::TVec2<GLclampf> vec2glf;
 
+    // TODO: the footprint of this structure can be reduced. We need only 1 bit for index type, 16
+    // bits for vertexAttribArray. We can also use fewer bits for vertexBufferVersion, although
+    // this will require a corollary update in OpenGLDriver::setVertexBufferObject().
     struct RenderPrimitive {
         GLuint vao = 0;
         GLenum indicesType = GL_UNSIGNED_INT;
         GLuint elementArray = 0;
         utils::bitset32 vertexAttribArray;
+
+        // The optional 32-bit handle to a GLVertexBuffer is necessary only if the referenced
+        // VertexBuffer supports buffer objects. If this is zero, then the VBO handles array is
+        // immutable.
+        backend::Handle<backend::HwVertexBuffer> vertexBufferWithObjects = {};
+
+        // If this version number does not match vertexBufferWithObjects->bufferObjectsVersion,
+        // then the VAO needs to be updated.
+        uint8_t vertexBufferVersion = 0;
     } gl;
 
     OpenGLContext() noexcept;
@@ -113,9 +127,9 @@ public:
 
     // supported extensions detected at runtime
     struct {
-        bool texture_compression_s3tc = false;
-        bool texture_compression_etc2 = false;
-        bool texture_filter_anisotropic = false;
+        bool WEBGL_texture_compression_s3tc = false;
+        bool EXT_texture_compression_etc2 = false;
+        bool EXT_texture_filter_anisotropic = false;
         bool QCOM_tiled_rendering = false;
         bool OES_EGL_image_external_essl3 = false;
         bool EXT_debug_marker = false;
@@ -130,6 +144,7 @@ public:
         bool EXT_disjoint_timer_query = false;
         bool EXT_shader_framebuffer_fetch = false;
         bool EXT_clip_control = false;
+        bool GOOGLE_cpp_style_line_directive = false;
     } ext;
 
     struct {
@@ -154,7 +169,7 @@ public:
 
         // Some drivers declare GL_EXT_texture_filter_anisotropic but don't support
         // calling glSamplerParameter() with GL_TEXTURE_MAX_ANISOTROPY_EXT
-        bool disable_texture_filter_anisotropic = false;
+        bool texture_filter_anisotropic_broken_on_sampler = false;
 
         // Some drivers have issues when reading from a mip while writing to a different mip.
         // In the OpenGL ES 3.0 specification this is covered in section 4.4.3,
